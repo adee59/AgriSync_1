@@ -1,21 +1,48 @@
 import streamlit as st
 import pandas as pd
-from pymongo import MongoClient
+import random
 import time
+from datetime import datetime
 
 st.set_page_config(page_title="AgriSync Command Center", layout="wide")
-client = MongoClient("mongodb://admin:password123@localhost:27017/")
-db = client.agrisync_records
 
-st.title("?? AgriSync Multi-Agent Operations Console")
+st.title("🚜 AgriSync Multi-Agent Operations Console")
+st.caption("Cloud Live Feed Mode")
 
 placeholder = st.empty()
 
-while True:
-    with placeholder.container():
-        cursor = db.logs.find().sort("_id", -1).limit(10)
-        df = pd.DataFrame(list(cursor))
+# Simulated database log store for cloud presentation
+if "cloud_logs" not in st.session_state:
+    st.session_state.cloud_logs = []
 
+while True:
+    # Generate continuous test telemetry
+    soil_val = random.randint(15, 45)
+    weather_val = random.randint(10, 90)
+    
+    if soil_val < 30 and weather_val < 70:
+        decision = "ACTIVATE_IRRIGATION"
+        reason = "Soil moisture critical (<30%). Low rain probability."
+    elif soil_val < 30 and weather_val >= 70:
+        decision = "DEFER_IRRIGATION"
+        reason = "Soil dry, but rain probability high (>=70%)."
+    else:
+        decision = "IDLE"
+        reason = "Optimal moisture levels maintained."
+
+    # Prepend new log
+    st.session_state.cloud_logs.insert(0, {
+        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "decision": decision,
+        "reason": reason,
+        "context": {"soil": soil_val, "weather": weather_val}
+    })
+    
+    # Keep last 10 records
+    st.session_state.cloud_logs = st.session_state.cloud_logs[:10]
+    df = pd.DataFrame(st.session_state.cloud_logs)
+
+    with placeholder.container():
         if not df.empty:
             last_entry = df.iloc[0]
             c1, c2, c3 = st.columns(3)
@@ -24,8 +51,6 @@ while True:
             c3.metric("Rain Probability", f"{last_entry['context']['weather']}%")
 
             st.subheader("Decision Audit Trail")
-            st.dataframe(df[['decision', 'reason', 'context']], use_container_width=True)
-        else:
-            st.info("Awaiting telemetry data stream...")
+            st.dataframe(df[['timestamp', 'decision', 'reason', 'context']], use_container_width=True)
 
     time.sleep(2)
