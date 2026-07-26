@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # 1. Message Broker (The Nervous System)
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    container_name: agrisync_mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+    restart: always
+
+  # 2. Database (The Memory)
+  mongodb:
+    image: mongo:latest
+    container_name: agrisync_db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+volumes:
+  mongo_data:
